@@ -31,6 +31,7 @@ server.stop()
 
 class Block:
 	def __init__(self, _label, _top, _width, _text=None, _bottom=None):
+		self.content = True
 		self.label = _label
 		self.width = _width
 		if _text is None:
@@ -51,11 +52,15 @@ class Block:
 
 	def __str__(self):
 		padChar = '-'
-		if self.text is None:
-			read = self.label
+		if self.content:
+			if self.text is None:
+				read = self.label
+			else:
+				read = "{}:{}".format(self.label, self.text)
 		else:
-			read = self.text
-		padding = (self.width - len(read)) - 2
+			read = "[?]"
+		padding = ((self.width * 6) - len(read)) - 2
+		if padding < 0: padding = 0
 		lPad = padding // 2
 		rPad = padding // 2
 		#add extra to right pad
@@ -64,20 +69,48 @@ class Block:
 
 
 class Spacer(Block):
-	def init(self, _width, _label=None):
+	def init(self, _label, _top, _width, _text=None, _bottom=None):
+		self.content = False
+		self.label = _label
+		self.top = _top
 		self.width = _width
-		if _label is None:
-			self.label = None
-		else:
-			self.label = _label
-		self.text = "[spacer]"
+		self.text = None
 		self.leaf = False
 		self.top = None
 
 
+class Gridblock:
+	def __init__(self, b):
+		self.block = b
+		self.label = None
+		self.text = None
+	def __str__(self):
+		return "[{}]".format(b)
+class GridPOS(Gridblock):
+	def __init__(self, b):
+		Gridblock.__init__(self, b)
+		self.label = b.label
+		self.content = True
+	def __str__(self):
+		return "[{}]".format(self.label)
+class GridWord(Gridblock):
+	def __init__(self, b):
+		Gridblock.__init__(self, b)
+		self.label = b.label
+		self.text = b.text
+		self.content = True
+	def __str__(self):
+		return "[{}]".format(self.text)
+class GridSpace(Gridblock):
+	def __init__(self):
+		Gridblock.__init__(self, None)
+		self.content = False
+	def __str__(self):
+		return "[{}]".format('--')
 
 
-class pTree:
+
+class parseTable:
 	def __init__(self, tree):
 		self.block_table = self.build(tree)
 
@@ -94,7 +127,7 @@ class pTree:
 			# Has children? (grandchildren)
 			if isinstance(tree[i], str):
 				# no children; tree is a pos; tree[i] is a word - no extra block for word
-				b = Block(tree.label(), depth, len(tree[i]), _text=tree[i])
+				b = Block(tree.label(), depth, 1, _text=tree[i])
 				# append to this level - this is the current tree
 				levels[0][0] = b
 				return levels
@@ -102,7 +135,9 @@ class pTree:
 			b = self.build(tree[i], depth+1) # recursive call
 			ptables.append(b)
 			# update width counter
-			width += b[0][0].width + 2
+			width += b[0][0].width
+
+
 		# Stitch ptables with levels
 		d = 0
 		while True:
@@ -110,8 +145,6 @@ class pTree:
 			for ptable in ptables:
 				# does this ptable go this deep?
 				if len(ptable) <= d: # if it does not
-					# copy phrase type down
-
 					stopcount += 1
 					continue
 				# is the levels table big enough?
@@ -129,26 +162,59 @@ class pTree:
 		#make own block
 		levels[0][0] = Block(tree.label(), depth, width)
 
+		#printT(levels)
+		#print('')
+
 		return levels
 
+	def gridify(self):
+		# move words to the bottom and replace with appropriate spacers
+		words = []
+		depth = len(self.block_table)
+		width = self.block_table[0][0].width
+		self.grid = [[None for _ in range(width)] for _ in range(depth)]
 
-def printT(tree, d=0):
-	if d == 5: return
+		trueInsert = 0
+		for d in range(depth):
+			insert = 0
+			offset = 0
+			for i in range(len(self.block_table[d])):
+				elem = self.block_table[d][i]
+				if elem.text == None:
+					#POS
+					for j in range(elem.width):
+						self.grid[d][insert + j] = GridPOS(elem)
+					insert += elem.width
+					offset += elem.width
+				else:
+					#Word
+					
+					#place it properly
+					print("{} -> {}".format(elem.text, insert))
+					self.grid[depth-1][insert] = GridWord(elem)
+					# Cascade
+					if d < depth-1:
+						self.block_table[d+1].insert(insert, elem)
+						# place spacer
+						self.grid[d][insert] = GridSpace()
+					insert += 1
+					
+					
 
-	print("|{}>".format(d), end='')
-	#print("  " * d, end='')
-	print("[{}]  ".format(tree if isinstance(tree, str) else tree.label()), end='')
-	print("{}".format(tree))
-	print("|{}|".format(len(tree)))
-	for i in range(len(tree)):
-		printT(tree[i], d+1)
 
 
 
-#printT(tree)
-p = pTree(tree)
 
-for b in p.block_table:
-	for d in b:
-		print(d, end='')
-	print()
+def printT(block_table):
+	for b in block_table:
+		for d in b:
+			print(d, end='')
+		print()
+
+
+
+
+p = parseTable(tree)
+printT(p.block_table)
+p.gridify()
+printT(p.grid)
