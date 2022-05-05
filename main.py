@@ -5,15 +5,18 @@ import Block
 import Display
 
 
-stext = "The quick brown fox jumped over the lazy dog so I killed it"
+stext = "The quick brown fox jumped over the lazy dog and we ran"
 
 parser = NLPserver.parser()
 tree = parser.parse(stext)
 
 
 p = Block.parseTable(tree, True)
-Block.printT(p.block_table)
-Block.printT(p.grid)
+#Block.printT(p.block_table)
+#Block.printT(p.grid)
+
+
+
 
 d = Display.visTree((-400, 400), p.grid)
 d.create()

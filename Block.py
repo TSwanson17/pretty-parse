@@ -1,75 +1,34 @@
 # Tree work
-import uuid
-
-class Block:
-	def __init__(self, _label, _top, _width, _text=None, _bottom=None):
-		self.id = uuid.uuid1().int
-		self.content = True
-		self.label = _label
-		self.width = _width
-		if _text is None:
-			self.text = None
-			self.leaf = False
-		else:
-			self.text = _text
-			self.leaf = True
-		self.top = _top
-		if _bottom is None:
-			self.bottom = _top
-		else:
-			self.bottom = _bottom
-		#print(self.__repr__())
-
-	def __repr__(self):
-		return "Block({}, {}, {}, {})".format(self.label, self.width, self.text, self.top)
-
-	def __str__(self):
-		padChar = '-'
-		if self.content:
-			if self.text is None:
-				read = self.label
-			else:
-				read = "{}:{}".format(self.label, self.text)
-		else:
-			read = "[?]"
-		padding = ((self.width * 6) - len(read)) - 2
-		if padding < 0: padding = 0
-		lPad = padding // 2
-		rPad = padding // 2
-		#add extra to right pad
-		rPad += self.width % (rPad + lPad + len(read))
-		return "|{} {} {}|".format(padChar * lPad, read, padChar * rPad)
+from uuid import uuid1
 
 
 class Gridblock:
-	def __init__(self, b):
-		if not b == None:
-			self.id = b.id
-		else:
-			self.id = None
-		self.block = b
+	def __init__(self):
+		self.id = None
 		self.label = None
 		self.text = None
+		self.content = True
 	def __str__(self):
 		return "[{}]".format(b)
 class GridPOS(Gridblock):
-	def __init__(self, b):
-		Gridblock.__init__(self, b)
-		self.label = b.label
+	def __init__(self, id, label):
+		Gridblock.__init__(self)
+		self.id = id
+		self.label = label
 		self.content = True
 	def __str__(self):
 		return "[{}]".format(self.label)
 class GridWord(Gridblock):
-	def __init__(self, b):
-		Gridblock.__init__(self, b)
-		self.label = b.label
-		self.text = b.text
+	def __init__(self, label, text):
+		Gridblock.__init__(self)
+		self.label = label
+		self.text = text
 		self.content = True
 	def __str__(self):
 		return "[{}]".format(self.text)
 class GridSpace(Gridblock):
 	def __init__(self):
-		Gridblock.__init__(self, None)
+		Gridblock.__init__(self)
 		self.content = False
 	def __str__(self):
 		return "[{}]".format('--')
@@ -78,95 +37,89 @@ class GridSpace(Gridblock):
 
 class parseTable:
 	def __init__(self, tree, verbose=False):
-		self.block_table = self.build(tree, 0, verbose)
-		self.gridify(verbose)
+		#self.block_table = self.build(tree, 0, verbose)
+		#self.gridify(verbose)
 
-	def build(self, tree, depth=0, verbose=False):# Recursive
-		# Skip root
-		if tree.label() == "ROOT": return self.build(tree[0])
-
-		levels = [[None]] # what we know about this level and all bellow; our return
-		ptables = []
-
-		width = 0
-		# For each child
-		for i in range(len(tree)):
-			# Has children? (grandchildren)
-			if isinstance(tree[i], str):
-				# no children; tree is a pos; tree[i] is a word - no extra block for word
-				b = Block(tree.label(), depth, 1, _text=tree[i])
-				# append to this level - this is the current tree
-				levels[0][0] = b
-				return levels
-			# has children
-			b = self.build(tree[i], depth+1, verbose) # recursive call
-			ptables.append(b)
-			# update width counter
-			width += b[0][0].width
+		self.grid = self.assemble(tree[0], verbose)
 
 
-		# Stitch ptables with levels
-		d = 0
-		while True:
-			stopcount = 0
-			for ptable in ptables:
-				# does this ptable go this deep?
-				if len(ptable) <= d: # if it does not
-					stopcount += 1
-					continue
-				# is the levels table big enough?
-				if len(levels) == d+1:
-					# make it bigger
-					levels.append(ptable[d]) # add ptable at d
-				else:
-					# extend the list
-					levels[d+1].extend(ptable[d])
-			d += 1
-			#stop condition
-			if stopcount == len(ptables):
-				# all ptables have been fully explored
-				break
-		#make own block
-		levels[0][0] = Block(tree.label(), depth, width)
+	def containsPOS(self, group):
+		for elem in group:
+			if isinstance(elem, GridPOS):
+				return False
+		return True
+
+	def gridStitch(self, gridA, gridB):
+		# B should always follow A
+		print("\nA")
+		printT(gridA)
+		print("\nB")
+		printT(gridB)
+
+
+		dif = len(gridA) - len(gridB)
+		if dif == 0:
+			# they match
+			for i in range(len(gridA)):
+				gridA[i].extend(gridB[i])
+				print("\n| AB")
+				printT(gridA)
+			return gridA
+		else:
+			newgrid = []
+			for i in range((len(gridA) if dif < 0 else len(gridB)) - 1):
+				# range of shorter list - 1; all matching
+				newgrid.append(gridA[i])
+				newgrid[-1].extend(gridB[i])
+			# Last x levels, don't match
+			i = len(newgrid)
+			if dif > 0:
+				# gridA is longer
+				for j in range(dif):
+					newgrid.append(gridA[i + j]) # second to last row
+					spacers = [GridSpace() for _ in range(len(gridB[-1]))]
+					newgrid[-1].extend(spacers)
+				newgrid.append(gridA[-1]) # last row
+				newgrid[-1].extend(gridB[-1])
+			else:
+				# gridB is longer
+				for j in range(dif * -1):
+					spacers = [GridSpace() for _ in range(len(gridA[-1]))]
+					newgrid.append(spacers)
+					newgrid[-1].extend(gridB[i + j])
+				newgrid.append(gridA[-1])
+				newgrid[-1].extend(gridB[-1])
+
+
+		print("\n| AB")
+		printT(newgrid)
+		return newgrid
+
+
+	def assemble(self, tree, verbose=False):
+		# is tree a word?
+		if isinstance(tree[0], str):
+			return [[GridWord(tree.label(), tree[0])]]
+
+		# for each child
+		grid = None
+		for subtree in tree:
+			if grid is None:
+				grid = self.assemble(subtree, verbose)
+			else:
+				grid = self.gridStitch(grid, self.assemble(subtree, verbose))
+		# top level of grid
+		treeID = uuid1().int
+		top = [GridPOS(treeID, tree.label()) for _ in range(len(grid[0]))]
+
+		grid.insert(0, top)
 
 		if verbose:
-			printT(levels)
+			print('\nG')
+			printT(grid)
 			print('')
 
-		return levels
-
-	def gridify(self, verbose=False):
-		# move words to the bottom and replace with appropriate spacers
-		depth = len(self.block_table)
-		width = self.block_table[0][0].width
-		if verbose: print("Grid:  {} x {}".format(width, depth))
-		self.grid = [[None for _ in range(width)] for _ in range(depth)]
-
-		trueInsert = 0
-		for d in range(depth):
-			insert = 0
-			for i in range(len(self.block_table[d])):
-				elem = self.block_table[d][i]
-				if elem.text == None:
-					#POS
-					for j in range(elem.width):
-						self.grid[d][insert + j] = GridPOS(elem)
-					insert += elem.width
-				else:
-					#Word
-					
-					#place it properly
-					if verbose: print("[{}] {} -> {}".format(d, elem.text, insert))
-					self.grid[depth-1][insert] = GridWord(elem)
-					# Cascade
-					if d < depth-1:
-						self.block_table[d+1].insert(insert, elem)
-						# place spacer
-						self.grid[d][insert] = GridSpace()
-					insert += 1
-					
-					
-
+		return grid
 
 
 
