@@ -1,8 +1,9 @@
 # Tree work
-
+import uuid
 
 class Block:
 	def __init__(self, _label, _top, _width, _text=None, _bottom=None):
+		self.id = uuid.uuid1().int
 		self.content = True
 		self.label = _label
 		self.width = _width
@@ -40,19 +41,12 @@ class Block:
 		return "|{} {} {}|".format(padChar * lPad, read, padChar * rPad)
 
 
-class Spacer(Block):
-	def init(self, _label, _top, _width, _text=None, _bottom=None):
-		self.content = False
-		self.label = _label
-		self.top = _top
-		self.width = _width
-		self.text = None
-		self.leaf = False
-		self.top = None
-
-
 class Gridblock:
 	def __init__(self, b):
+		if not b == None:
+			self.id = b.id
+		else:
+			self.id = None
 		self.block = b
 		self.label = None
 		self.text = None
