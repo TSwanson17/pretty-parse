@@ -51,10 +51,6 @@ class parseTable:
 
 	def gridStitch(self, gridA, gridB):
 		# B should always follow A
-		print("\nA")
-		printT(gridA)
-		print("\nB")
-		printT(gridB)
 
 
 		dif = len(gridA) - len(gridB)
@@ -62,8 +58,6 @@ class parseTable:
 			# they match
 			for i in range(len(gridA)):
 				gridA[i].extend(gridB[i])
-				print("\n| AB")
-				printT(gridA)
 			return gridA
 		else:
 			newgrid = []
@@ -91,8 +85,6 @@ class parseTable:
 				newgrid[-1].extend(gridB[-1])
 
 
-		print("\n| AB")
-		printT(newgrid)
 		return newgrid
 
 

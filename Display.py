@@ -24,7 +24,7 @@ class Branch:
 		self.style = style
 		self.layers = layers
 
-		#print("Box: {}  |  {}".format(self.pos, self.text))
+		#print("Box: {}  |  {}  [{}]".format(self.pos, self.text, layers))
 
 	def drawBox(self):
 		self.t.setpos(self.pos)
@@ -63,6 +63,8 @@ class Leaf(Branch):
 		self.t = turtle.Turtle()
 		self.size = self.drawText()
 		self.size *= 2
+		if self.size < self.height * 1.5:
+			self.size *= 2
 		return self.size
 
 
@@ -72,7 +74,7 @@ class visTree:
 		self.pos = pos # this is the upper right corner of the drawn tree
 		self.bGrid = block_grid # grid of gridBlock objects
 
-		self.color_list = ['#33cc8c', '#804f5f', '#2f4b7c', '#665191', '#a05195', '#d45087', '#f95d6a', '#ff7c43', '#ffa600']
+		self.color_list = ['#33cc8c', '#b38d99', '#2f4b7c', '#665191', '#a05195', '#d45087', '#f95d6a', '#ff7c43', '#ffa600']
 		self.colorscheme = colorgen(self.color_list)
 		self.style = ("Arial", 14)
 		self.layerHeight = 20
@@ -116,7 +118,7 @@ class visTree:
 				if d + 1 == tDepth:
 					# at the bottom, leaves
 					text = block.text
-					self.treeTable[d].append(Leaf(text, tuple(drawPos), self.layerHeight, self.style, width=self.widths[b]))
+					self.treeTable[d].append(Leaf(text, (drawPos[0], self.pos[1] - ((tDepth-1) * self.layerHeight)), self.layerHeight, self.style, width=self.widths[b]))
 					drawPos[0] += self.widths[b]
 				else:
 					# branch
@@ -128,7 +130,7 @@ class visTree:
 					# finish old branch?
 					if not currentBranch['id'] is None:
 						if b+1 == len(self.widths) or block.id != currentBranch['id']:
-							l = tDepth - d - 1
+							l = tDepth - (d + 1)
 							self.treeTable[d].append(Branch(currentBranch['text'], tuple(drawPos), self.layerHeight, currentBranch['width'], next(self.colorscheme), self.style, l))
 							drawPos[0] += currentBranch['width']
 					
@@ -140,6 +142,7 @@ class visTree:
 			drawPos[0] = self.pos[0]
 			drawPos[1] -= self.layerHeight
 
+
 	def draw(self):
 		turtle.tracer(0, 0)
 		turtle.hideturtle()
@@ -149,23 +152,4 @@ class visTree:
 				branch.draw()	
 
 
-
-turtle.tracer(0, 0) # stops the drawing animation
-
-'''
-turtle.tracer(0, 0) # stops the drawing animation
-style = ("Arial", 20)
-
-b = Branch("Hi", (0, 0), 30, 300, next(colorscheme), style)
-b.draw()
-
-b = Branch("Oh", (-200, 0), 30, 200, next(colorscheme), style)
-b.draw()
-
-l = Leaf(" leafy ", (0, -30), 30, 200, style)
-l.draw()
-'''
-
-
-#input("")
 

@@ -23,8 +23,9 @@ class parser:
       else:
          print("Starting Stanford NLP Server")
          self.server.start()
+         self.parser = CoreNLPParser()
          self.running = True
-         print("Server started")
+         #print("Server started")
          return True
 
 
@@ -39,13 +40,12 @@ class parser:
          print("Server is not running")
          return False
 
-   # The parser
+   # The parser - will start the server but will not stop
    def parse(self, text):
       if not self.running:
          self.start()
-         self.parser = CoreNLPParser()
+      
       tree = next(self.parser.raw_parse(text))
-      #stop()
       return tree
 
    # cleanup
